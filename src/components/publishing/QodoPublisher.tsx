@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QodoPublisher, QodoMicrosite, QodoPublishRequest } from '@/lib/publishing/qodo';
 
 interface QodoPublisherProps {
@@ -36,9 +36,9 @@ export default function QodoPublisherComponent({
       setPublisher(qodoPublisher);
       loadMicrosites();
     });
-  }, []);
+  }, [loadMicrosites]);
 
-  const loadMicrosites = async () => {
+  const loadMicrosites = useCallback(async () => {
     if (!publisher) return;
     
     try {
@@ -47,7 +47,7 @@ export default function QodoPublisherComponent({
     } catch (error) {
       console.error('Failed to load microsites:', error);
     }
-  };
+  }, [publisher, proposalId]);
 
   const handlePublish = async () => {
     if (!publisher) return;
@@ -248,7 +248,7 @@ export default function QodoPublisherComponent({
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{microsite.title}</h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {microsite.company} • {microsite.metadata.views} views
+                      {microsite.metadata.company} • {microsite.metadata.views} views
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
                       Created: {microsite.createdAt.toLocaleDateString()}

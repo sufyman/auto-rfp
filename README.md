@@ -17,14 +17,85 @@ This system showcases advanced AI agent capabilities through a complete RFP work
 ## 🚀 Quick Start
 
 ```bash
+# Clone and setup
+git clone <repository-url>
+cd auto-rfp
+
 # Install dependencies
 npm install
+
+# Copy environment template
+cp .env.example .env.local
 
 # Start development server
 npm run dev
 
 # Open http://localhost:3000
 ```
+
+## ⚙️ Setup Instructions
+
+### Prerequisites
+- Node.js 18+ and npm
+- Redis server (optional - fallback mode available)
+- API keys for external services (optional - demo mode available)
+
+### Environment Configuration
+
+The system works in **demo mode** by default with fallback implementations. For full functionality, configure these services:
+
+```bash
+# Authentication (Stytch)
+NEXT_PUBLIC_STYTCH_PROJECT_ID=your_project_id
+NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN=your_public_token
+STYTCH_SECRET=your_secret_key
+
+# Context Engineering (Senso)
+SENSO_API_KEY=your_senso_api_key
+SENSO_ORG_ID=your_org_id
+
+# Evaluation (HoneyHive)
+HONEYHIVE_API_KEY=your_honeyhive_api_key
+
+# Publishing (Qodo)
+QODO_API_KEY=your_qodo_api_key
+
+# Data Sources
+BRIGHT_DATA_API_KEY=your_bright_data_key
+APIFY_API_TOKEN=your_apify_token
+
+# Vector Store (Redis)
+REDIS_URL=redis://localhost:6379
+
+# LLM APIs
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+### Running the Demo
+
+1. **Development Mode**:
+   ```bash
+   npm run dev
+   ```
+
+2. **Production Build**:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+3. **Type Checking**:
+   ```bash
+   npm run type-check
+   ```
+
+### Demo Features
+
+- **Fallback Mode**: All components work without external APIs
+- **Real-time Visualization**: Live agent workflow display  
+- **Interactive Demo**: Click "Start Demo" to see the full pipeline
+- **API Testing**: Built-in endpoints for testing integrations
 
 ## 🏗️ Architecture
 

@@ -16,7 +16,7 @@ export class SensoMCP {
   private isConnected = false;
   private apiKey: string;
   private orgId: string;
-  private apiUrl = 'https://sdk.senso.ai/api/v1';
+  private apiUrl = 'https://api.senso.ai/v1';
 
   constructor() {
     this.apiKey = process.env.SENSO_API_KEY || '';
@@ -78,36 +78,81 @@ export class SensoMCP {
 
   async connect(): Promise<boolean> {
     try {
-      if (!this.apiKey) {
-        console.warn('⚠️ SENSO_API_KEY not found, using fallback mode');
+      if (!this.apiKey || this.apiKey === 'your_senso_api_key_here') {
+        console.warn('⚠️ SENSO_API_KEY not configured, using fallback mode');
         this.isConnected = true;
         this.connection.status = 'connected';
         this.connection.lastPing = new Date();
         return true;
       }
 
-      // Test connection to Senso API with content ingestion
-      const testResponse = await axios.post(`${this.apiUrl}/content/raw`, {
-        title: 'test_connection',
-        body: 'test'
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+      // Server-side logs (show in terminal)
+      if (typeof window === 'undefined') {
+        console.log('🔍 SENSO API: Attempting connection...');
+        console.log(`🔑 API Key: ${this.apiKey.substring(0, 12)}...`);
+        console.log(`🏢 Org ID: ${this.orgId}`);
+        console.log(`🌐 API URL: ${this.apiUrl}`);
+      }
+
+      // Test connection to Senso API using X-API-Key header
+      let testResponse;
+      try {
+        // Try /health endpoint first
+        testResponse = await axios.get(`${this.apiUrl}/health`, {
+          headers: {
+            'X-API-Key': this.apiKey,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+      } catch (error) {
+        // Fallback to /status endpoint
+        try {
+          testResponse = await axios.get(`${this.apiUrl}/status`, {
+            headers: {
+              'X-API-Key': this.apiKey,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+        } catch (fallbackError) {
+          // If both fail, try a simple GET to root
+          testResponse = await axios.get(`${this.apiUrl}`, {
+            headers: {
+              'X-API-Key': this.apiKey,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
         }
-      });
+      }
 
       if (testResponse.status === 200) {
         this.isConnected = true;
         this.connection.status = 'connected';
         this.connection.lastPing = new Date();
-        console.log('✅ Connected to Senso API successfully');
+        // Server-side logs (show in terminal)
+        if (typeof window === 'undefined') {
+          console.log('✅ REAL SENSO API: Connected successfully');
+          console.log(`🔑 Using API Key: ${this.apiKey.substring(0, 8)}...`);
+          console.log(`🏢 Organization ID: ${this.orgId}`);
+        }
         return true;
       } else {
         throw new Error(`Senso API returned status: ${testResponse.status}`);
       }
     } catch (error) {
-      console.warn('⚠️ Senso API connection failed, using fallback mode:', error instanceof Error ? error.message : String(error));
+      // Server-side logs (show in terminal)
+      if (typeof window === 'undefined') {
+        console.warn('❌ SENSO API connection failed, using fallback mode');
+        if (axios.isAxiosError(error)) {
+          console.warn(`   Status: ${error.response?.status}`);
+          console.warn(`   Message: ${error.response?.data?.message || error.message}`);
+          console.warn(`   URL: ${error.config?.url}`);
+        } else {
+          console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
       this.isConnected = true;
       this.connection.status = 'connected';
       this.connection.lastPing = new Date();
@@ -136,21 +181,23 @@ export class SensoMCP {
           }
         }, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'X-API-Key': this.apiKey,
             'Content-Type': 'application/json'
           }
         });
 
         const contentId = contentResponse.data.content_id;
-        console.log(`📄 Ingested RFP content to Senso: ${contentId}`);
-
-        // 2. Search for requirements using Senso
+        // Server-side logs (show in terminal)
+        if (typeof window === 'undefined') {
+          console.log(`✅ REAL SENSO API: Content ingested with ID ${contentId}`);
+          console.log(`🔍 REAL SENSO API: Searching for requirements...`);
+        }
         const searchResponse = await axios.post(`${this.apiUrl}/search`, {
           question: 'Extract all requirements from this RFP document, categorizing them as mandatory, desirable, technical, commercial, or legal',
           filter: { content_ids: [contentId] }
         }, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'X-API-Key': this.apiKey,
             'Content-Type': 'application/json'
           }
         });
@@ -161,7 +208,7 @@ export class SensoMCP {
           filter: { content_ids: [contentId] }
         }, {
           headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
+            'X-API-Key': this.apiKey,
             'Content-Type': 'application/json'
           }
         });
@@ -191,7 +238,12 @@ export class SensoMCP {
           }
         };
 
-        console.log(`✅ Successfully normalized RFP data using Senso API`);
+        // Server-side logs (show in terminal)
+        if (typeof window === 'undefined') {
+          console.log(`✅ REAL SENSO API: Successfully normalized RFP data`);
+          console.log(`📊 Generated ${requirements.length} requirements, ${evaluationCriteria.length} criteria`);
+          console.log(`🧠 Processing time: ${Date.now() - startTime}ms`);
+        }
 
         return {
           contextPack,
@@ -395,7 +447,11 @@ export class SensoMCP {
   }
 
   private async fallbackNormalization(rawData: any): Promise<SensoNormalizationResult> {
-    console.log('🔄 Falling back to local processing...');
+    // Server-side logs (show in terminal)
+    if (typeof window === 'undefined') {
+      console.log('🔄 SENSO FALLBACK MODE: Using local processing...');
+      console.log('💡 To use real Senso: Configure SENSO_API_KEY and SENSO_ORG_ID');
+    }
     
     const requirements = await this.extractRequirements(rawData.content || rawData);
     const evaluationCriteria = this.extractEvaluationCriteria(rawData.content || rawData);

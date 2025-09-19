@@ -45,29 +45,55 @@ export class QodoPublisher {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.QODO_API_KEY || '';
-    this.baseUrl = process.env.QODO_BASE_URL || 'https://api.qodo.ai/v1';
+    this.baseUrl = process.env.QODO_BASE_URL || 'https://qodo-platform.qodo.ai';
   }
 
   async initialize(): Promise<boolean> {
     try {
-      if (!this.apiKey || this.apiKey === 'your_qodo_api_key') {
+      if (!this.apiKey || this.apiKey === 'your_qodo_api_key_here') {
         console.log('Qodo API key not configured, using fallback mode');
         this.isConnected = false;
         return true; // Allow fallback mode
       }
 
-      // Test API connection
-      const response = await axios.get(`${this.baseUrl}/health`, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 5000
-      });
+      // Test API connection with multiple endpoint fallbacks
+      let response;
+      try {
+        // Try /health endpoint first
+        response = await axios.get(`${this.baseUrl}/health`, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 5000
+        });
+      } catch (error) {
+        // Fallback to /status endpoint
+        try {
+          response = await axios.get(`${this.baseUrl}/status`, {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 5000
+          });
+        } catch (fallbackError) {
+          // If both fail, try a simple GET to root
+          response = await axios.get(`${this.baseUrl}`, {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 5000
+          });
+        }
+      }
 
       if (response.status === 200) {
         this.isConnected = true;
-        console.log('✅ Qodo API connected successfully');
+        console.log('✅ REAL QODO API: Connected successfully');
+        console.log(`🔑 Using API Key: ${this.apiKey.substring(0, 8)}...`);
+        console.log(`🌐 Base URL: ${this.baseUrl}`);
         return true;
       } else {
         throw new Error(`Qodo API returned status: ${response.status}`);
@@ -111,6 +137,10 @@ export class QodoPublisher {
       });
 
       if (response.status === 201) {
+        console.log('✅ REAL QODO API: Microsite published successfully');
+        console.log(`🌐 Live URL: ${response.data.url}`);
+        console.log(`👀 Preview URL: ${response.data.previewUrl}`);
+        
         const microsite: QodoMicrosite = {
           id: response.data.id,
           title: response.data.title,
@@ -451,11 +481,16 @@ export class QodoPublisher {
 
   // Fallback methods for when Qodo is not available
   private fallbackPublish(request: QodoPublishRequest): QodoPublishResponse {
+    console.log('🔄 QODO FALLBACK MODE: Creating local preview microsite');
+    console.log('💡 To use real Qodo: Configure QODO_API_KEY');
+    
     const micrositeId = `qodo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const localUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/proposal/${request.proposalId}`;
+    
     const microsite: QodoMicrosite = {
       id: micrositeId,
       title: request.title,
-      url: `https://demo.qodo.ai/microsites/${micrositeId}`,
+      url: localUrl,
       status: 'published',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -468,10 +503,10 @@ export class QodoPublisher {
       }
     };
 
-    console.log(`📄 Demo microsite created: ${microsite.url}`);
-    console.log(`   Title: ${request.title}`);
-    console.log(`   Company: ${request.company}`);
-    console.log(`   CTA: ${request.ctaText} -> ${request.ctaUrl}`);
+    console.log(`📄 LOCAL PREVIEW MICROSITE: ${microsite.url}`);
+    console.log(`   📝 Title: ${request.title}`);
+    console.log(`   🏢 Company: ${request.company}`);
+    console.log(`   🔗 CTA: ${request.ctaText} -> ${request.ctaUrl}`);
 
     return {
       success: true,

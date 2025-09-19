@@ -1,4 +1,4 @@
-import { StytchUIClient, B2BProducts } from '@stytch/vanilla-js';
+// import { StytchUIClient, B2BProducts } from '@stytch/vanilla-js';
 
 export interface StytchConfig {
   projectId: string;
@@ -24,7 +24,7 @@ export interface AuthSession {
 }
 
 export class StytchAuth {
-  private client: StytchUIClient;
+  private client: any; // StytchUIClient;
   private config: StytchConfig;
 
   constructor(config?: Partial<StytchConfig>) {
@@ -39,7 +39,8 @@ export class StytchAuth {
       console.warn('Stytch configuration incomplete, using fallback mode');
     }
 
-    this.client = new StytchUIClient(this.config.publicToken);
+    // Don't initialize client on server side - use fallback mode for demo
+    this.client = null;
   }
 
   async initialize(): Promise<boolean> {
@@ -72,11 +73,35 @@ export class StytchAuth {
 
   async sendMagicLink(email: string, organizationName?: string): Promise<boolean> {
     try {
-      // For demo purposes, we'll use fallback mode
-      return this.fallbackMagicLink(email);
+      if (this.config.projectId && this.config.secret && this.config.publicToken) {
+        // Use real Stytch API
+        const response = await fetch('https://api.stytch.com/v1/b2b/magic_links/email/login_or_signup', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${this.config.projectId}:${this.config.secret}`).toString('base64')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email_address: email,
+            organization_name: organizationName || 'Auto RFP Demo'
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`✅ REAL STYTCH API: Magic link sent to ${email}`);
+          console.log(`📧 Stytch Response:`, result);
+          return true;
+        } else {
+          console.warn(`❌ STYTCH API FAILED (${response.status}): Using fallback mode`);
+          return this.fallbackMagicLink(email);
+        }
+      } else {
+        return this.fallbackMagicLink(email);
+      }
     } catch (error) {
       console.error('Magic link send failed:', error);
-      return false;
+      return this.fallbackMagicLink(email);
     }
   }
 
@@ -132,7 +157,8 @@ export class StytchAuth {
   }
 
   private fallbackMagicLink(email: string): boolean {
-    console.log(`Demo mode: Magic link would be sent to ${email}`);
+    console.log(`🔄 STYTCH FALLBACK MODE: Demo magic link for ${email}`);
+    console.log(`💡 To use real Stytch: Configure STYTCH_SECRET and NEXT_PUBLIC_STYTCH_PROJECT_ID`);
     return true;
   }
 

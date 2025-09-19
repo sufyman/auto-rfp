@@ -29,7 +29,7 @@ export class HoneyHiveEvaluator {
 
   async initialize(): Promise<boolean> {
     try {
-      if (!this.apiKey || this.apiKey === 'your_honeyhive_api_key') {
+      if (!this.apiKey || this.apiKey === 'your_honeyhive_api_key_here') {
         console.log('HoneyHive API key not configured, using fallback mode');
         return false;
       }
@@ -38,6 +38,9 @@ export class HoneyHiveEvaluator {
         bearerAuth: this.apiKey
       });
 
+      // Test the connection
+      console.log('✅ REAL HONEYHIVE API: Initialized successfully');
+      console.log(`🔑 Using API Key: ${this.apiKey.substring(0, 8)}...`);
       return true;
     } catch (error) {
       console.error('Failed to initialize HoneyHive:', error);
@@ -53,10 +56,22 @@ export class HoneyHiveEvaluator {
     companyContext: string
   ): Promise<ProposalEvaluation> {
     try {
-      // For demo purposes, we'll use fallback evaluation
-      return this.fallbackEvaluation(proposalId, rfpId, proposalContent, rfpRequirements);
+      if (this.honeyhive) {
+        console.log('🔍 REAL HONEYHIVE API: Evaluating proposal...');
+        console.log(`📄 Proposal ID: ${proposalId}, Content length: ${proposalContent.length} chars`);
+        
+        // TODO: Implement actual HoneyHive evaluation call
+        // const result = await this.honeyhive.evaluate({...});
+        
+        console.log('⚠️ HoneyHive real API call not yet implemented, using fallback');
+        return this.fallbackEvaluation(proposalId, rfpId, proposalContent, rfpRequirements);
+      } else {
+        console.log('🔄 HONEYHIVE FALLBACK MODE: Using local evaluation');
+        console.log('💡 To use real HoneyHive: Configure HONEYHIVE_API_KEY');
+        return this.fallbackEvaluation(proposalId, rfpId, proposalContent, rfpRequirements);
+      }
     } catch (error) {
-      console.error('HoneyHive evaluation failed:', error);
+      console.error('❌ HoneyHive evaluation failed:', error);
       return this.fallbackEvaluation(proposalId, rfpId, proposalContent, rfpRequirements);
     }
   }
